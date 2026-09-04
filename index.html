@@ -4,114 +4,777 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Catatan Pintar — Offline</title>
+  <meta name="description" content="Catatan pintar offline: tulis catatan, kelola keuangan, dan lampirkan file — semuanya tersimpan di perangkat Anda sendiri.">
+  <meta property="og:title" content="Catatan Pintar — Offline">
+  <meta property="og:description" content="Catatan pintar offline: tulis catatan, kelola keuangan, dan lampirkan file — semuanya tersimpan di perangkat Anda sendiri.">
+  <meta property="og:type" content="website">
   <meta name="theme-color" content="#47593f">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Catatan Pintar">
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" href="./icons/icon-192.png">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+
+  <!-- Tailwind CSS via CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
   <style>
-    body { font-family: 'IBM Plex Sans', sans-serif; background: #e9e3d5; color: #2b2a24; }
-    .mono { font-family: 'IBM Plex Mono', monospace; }
-  </style>
-</head>
-<body class="p-4 max-w-2xl mx-auto">
-  <header class="flex justify-between items-center border-b-2 border-stone-800 pb-3 mb-4">
-    <h1 class="text-2xl font-bold mono">Catatan Pintar</h1>
-    <div class="flex gap-2">
-      <button id="addBtn" class="bg-emerald-700 text-white px-4 py-2 rounded text-sm font-semibold mono">＋ Catatan Baru</button>
-    </div>
-  </header>
+    :root {
+      --paper: #e9e3d5;
+      --card: #faf7ef;
+      --card-edge: #d8d0bb;
+      --ink: #2b2a24;
+      --ink-soft: #6b6858;
+      --moss: #47593f;
+      --moss-dark: #37452f;
+      --plum: #6b3f52;
+      --gold: #b8922f;
+      --slate: #3d5a6b;
+      --teal: #2f6b5e;
+      --gray: #7a7566;
+      --danger: #a3402f;
+      --warning: #c27d1a;
+      --success: #2d6a4f;
+    }
 
-  <div class="mb-4">
-    <input type="text" id="searchInput" placeholder="Cari catatan..." class="w-full p-2 border border-stone-300 rounded bg-white text-sm mono">
-  </div>
+    * { box-sizing: border-box; }
 
-  <div id="notesContainer" class="flex flex-col gap-3"></div>
+    html, body {
+      margin: 0; padding: 0;
+      background: var(--paper);
+      background-image: radial-gradient(circle at 1px 1px, rgba(43,42,36,0.05) 1px, transparent 0);
+      background-size: 22px 22px;
+      color: var(--ink);
+      font-family: 'IBM Plex Mono', monospace;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
 
-  <!-- Form Editor Sederhana -->
-  <div id="editorModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center p-4">
-    <div class="bg-stone-50 w-full max-w-lg p-6 rounded shadow-lg flex flex-col gap-3">
-      <h2 id="modalTitle" class="text-lg font-bold mono">Tulis Catatan</h2>
-      <input type="hidden" id="noteId">
-      <input type="text" id="noteTitleInput" placeholder="Judul..." class="p-2 border border-stone-300 rounded bg-white mono text-sm">
-      <textarea id="noteContentInput" rows="5" placeholder="Tulis catatan di sini..." class="p-2 border border-stone-300 rounded bg-white mono text-sm"></textarea>
-      <div class="flex justify-end gap-2 mt-2">
-        <button id="cancelBtn" class="px-4 py-2 border border-stone-300 rounded text-sm mono">Batal</button>
-        <button id="saveBtn" class="px-4 py-2 bg-emerald-700 text-white rounded text-sm mono font-semibold">Simpan</button>
-      </div>
-    </div>
-  </div>
+    .wrap {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 20px 16px 140px;
+    }
 
-  <!-- Pustaka Pendukung & Logika Utama -->
-  <script src="cordova.js"></script>
-  <script type="module">
-    import { StorageManager } from './storage.js';
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 2px solid var(--ink);
+      padding-bottom: 12px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    header h1 {
+      font-family: 'Source Serif 4', Georgia, serif;
+      font-weight: 700;
+      font-size: 24px;
+      margin: 0;
+      letter-spacing: -0.01em;
+      color: var(--ink);
+    }
+    header .head-actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
 
-    document.addEventListener('DOMContentLoaded', async () => {
-      await StorageManager.initDB();
-      loadNotes();
+    .icon-btn {
+      background: var(--card);
+      border: 1px solid var(--card-edge);
+      color: var(--ink);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 7px 12px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all .15s ease-in-out;
+      border-radius: 3px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 35px;
+      user-select: none;
+      box-shadow: 0 1px 2px rgba(43,42,36,0.04);
+    }
+    .icon-btn:hover {
+      border-color: var(--moss);
+      color: var(--moss);
+      background: #fff;
+      box-shadow: 0 2px 4px rgba(43,42,36,0.08);
+      transform: translateY(-1px);
+    }
+    .icon-btn:active {
+      transform: translateY(1px);
+      box-shadow: none;
+    }
+    .icon-btn:focus-visible {
+      outline: 2px solid var(--moss);
+      outline-offset: 2px;
+    }
+    .icon-btn.active,
+    .icon-btn.active-mode {
+      background: var(--moss);
+      color: #fff;
+      border-color: var(--moss);
+      font-weight: 600;
+      box-shadow: 0 2px 5px rgba(71,89,63,0.3);
+    }
+    .icon-btn.active:hover,
+    .icon-btn.active-mode:hover {
+      background: var(--moss-dark);
+      border-color: var(--moss-dark);
+      color: #fff;
+    }
+    #financeBtn:hover {
+      border-color: var(--teal);
+      color: var(--teal);
+    }
+    #manageCatBtn:hover {
+      border-color: var(--plum);
+      color: var(--plum);
+    }
+    #filterToggleBtn:hover {
+      border-color: var(--moss);
+      color: var(--moss);
+    }
+    #importMainBtn:hover {
+      border-color: var(--slate);
+      color: var(--slate);
+    }
+    #exportMainBtn:hover {
+      border-color: var(--slate);
+      color: var(--slate);
+    }
+    #selectModeBtn:hover {
+      border-color: var(--gold);
+      color: var(--gold);
+    }
 
-      const container = document.getElementById('notesContainer');
-      const modal = document.getElementById('editorModal');
-      
-      document.getElementById('addBtn').onclick = () => {
-        document.getElementById('noteId').value = '';
-        document.getElementById('noteTitleInput').value = '';
-        document.getElementById('noteContentInput').value = '';
-        document.getElementById('modalTitle').innerText = 'Tulis Catatan Baru';
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
-      };
+    /* Storage bar */
+    .storage-bar-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      color: var(--ink-soft);
+      margin: 10px 0 4px;
+      padding: 6px 10px;
+      background: rgba(250, 247, 239, 0.7);
+      border: 1px solid var(--card-edge);
+      border-radius: 2px;
+      flex-wrap: wrap;
+    }
+    .storage-meter {
+      flex: 1;
+      min-width: 80px;
+      height: 6px;
+      background: var(--card-edge);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .storage-fill {
+      height: 100%;
+      background: var(--moss);
+      width: 0%;
+      transition: width .3s, background-color .3s;
+    }
+    .storage-fill.warn { background: var(--warning); }
+    .storage-fill.danger { background: var(--danger); }
 
-      document.getElementById('cancelBtn').onclick = () => {
-        modal.classList.remove('flex');
-        modal.classList.add('hidden');
-      };
+    .storage-warning-banner {
+      display: none;
+      background: #fff4e5;
+      border: 1px solid var(--warning);
+      color: #7c4a03;
+      padding: 10px 14px;
+      font-size: 12px;
+      line-height: 1.5;
+      margin: 8px 0;
+      border-radius: 2px;
+    }
+    .storage-warning-banner.show { display: block; }
 
-      document.getElementById('saveBtn').onclick = async () => {
-        const id = document.getElementById('noteId').value || Date.now().toString();
-        const title = document.getElementById('noteTitleInput').value;
-        const content = document.getElementById('noteContentInput').value;
-        const timestamp = Date.now();
+    .privacy-line {
+      font-size: 11px;
+      color: var(--ink-soft);
+      margin: 6px 0 14px;
+      line-height: 1.5;
+    }
+    .privacy-line b { color: var(--moss); }
 
-        if (!title && !content) return alert('Judul atau isi tidak boleh kosong!');
+    .search-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+      position: relative;
+    }
+    .search-tab {
+      position: relative;
+      flex: 1;
+    }
+    .search-tab input {
+      width: 100%;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 13.5px;
+      padding: 10px 34px 10px 36px;
+      border: 1px solid var(--card-edge);
+      border-bottom: 2px solid var(--card-edge);
+      background: var(--card);
+      color: var(--ink);
+      outline: none;
+      transition: all .15s ease-in-out;
+      border-radius: 2px;
+    }
+    .search-tab input:focus {
+      border-color: var(--moss);
+      border-bottom-color: var(--moss);
+      background: #fff;
+    }
+    .search-tab::before {
+      content: "🔍";
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 13px;
+      opacity: .6;
+      pointer-events: none;
+    }
+    .search-clear-btn {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--ink-soft);
+      cursor: pointer;
+      font-size: 14px;
+      display: none;
+      padding: 4px;
+    }
+    .search-clear-btn:hover { color: var(--danger); }
 
-        await StorageManager.saveNote({ id, title, content, timestamp });
-        modal.classList.remove('flex');
-        modal.classList.add('hidden');
-        loadNotes();
-      };
+    .filter-panel {
+      display: none;
+      background: var(--card);
+      border: 1px solid var(--card-edge);
+      padding: 14px;
+      margin-bottom: 14px;
+      gap: 12px;
+      flex-direction: column;
+      border-radius: 2px;
+    }
+    .filter-panel.open, .filter-panel.show { display: flex; }
+    .filter-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .filter-row > div {
+      flex: 1;
+      min-width: 140px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .filter-row label {
+      font-size: 11px;
+      color: var(--ink-soft);
+      font-weight: 500;
+    }
+    .filter-row select, .filter-row input[type=date] {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12.5px;
+      padding: 8px 10px;
+      border: 1px solid var(--card-edge);
+      background: #fff;
+      color: var(--ink);
+      border-radius: 2px;
+      outline: none;
+    }
+    .filter-row select:focus, .filter-row input[type=date]:focus {
+      border-color: var(--moss);
+    }
+    .filter-reset {
+      align-self: flex-start;
+      font-size: 11.5px;
+      background: none;
+      border: none;
+      color: var(--danger);
+      cursor: pointer;
+      text-decoration: underline;
+      padding: 2px 0;
+    }
 
-      async function loadNotes() {
-        const notes = await StorageManager.getAllNotes();
-        container.innerHTML = '';
-        if (notes.length === 0) {
-          container.innerHTML = '<p class="text-stone-500 text-center py-8 mono text-sm">Belum ada catatan.</p>';
-          return;
-        }
-        notes.forEach(note => {
-          const card = document.createElement('div');
-          card.className = 'bg-white p-4 border border-stone-300 rounded shadow-sm relative';
-          card.innerHTML = `
-            <h3 class="font-bold text-base mb-1 mono">${escapeHtml(note.title || 'Tanpa Judul')}</h3>
-            <p class="text-stone-600 text-sm whitespace-pre-wrap mono">${escapeHtml(note.content)}</p>
-            <button class="absolute top-3 right-3 text-red-500 text-xs mono hover:underline" data-id="${note.id}">Hapus</button>
-          `;
-          card.querySelector('button').onclick = async (e) => {
-            if (confirm('Hapus catatan ini?')) {
-              await StorageManager.deleteNote(e.target.dataset.id);
-              loadNotes();
-            }
-          };
-          container.appendChild(card);
-        });
+    .chips-row {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 6px;
+      margin-bottom: 16px;
+      scrollbar-width: thin;
+      -webkit-overflow-scrolling: touch;
+    }
+    .chip {
+      flex-shrink: 0;
+      font-size: 12px;
+      padding: 6px 12px;
+      border: 1px solid var(--card-edge);
+      background: var(--card);
+      color: var(--ink-soft);
+      cursor: pointer;
+      white-space: nowrap;
+      border-radius: 2px;
+      transition: all .15s ease-in-out;
+    }
+    .chip:hover {
+      border-color: currentColor;
+      background: #fff;
+    }
+    .chip.active {
+      border-color: currentColor;
+      font-weight: 600;
+      background: #fff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .chip .n {
+      opacity: .75;
+      font-size: 10px;
+      margin-left: 2px;
+    }
+
+    .notes-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .note-card {
+      background: var(--card);
+      border: 1px solid var(--card-edge);
+      border-left-width: 4px;
+      padding: 16px 18px;
+      cursor: pointer;
+      transition: transform .12s, box-shadow .15s, background .2s;
+      position: relative;
+      border-radius: 2px;
+    }
+    .note-card:hover {
+      box-shadow: 3px 3px 0 rgba(43,42,36,.08);
+      transform: translate(-1px,-1px);
+    }
+
+    .notes-list.select-mode .note-card { padding-left: 46px; }
+    .card-checkbox {
+      display: none;
+      position: absolute;
+      left: 14px;
+      top: 18px;
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+      accent-color: var(--moss);
+      z-index: 2;
+    }
+    .notes-list.select-mode .card-checkbox { display: block; }
+    .note-card.selected {
+      background: #f4f1e1;
+      border-color: var(--moss);
+    }
+    .note-card.is-pinned {
+      border-left-color: var(--gold) !important;
+      background: linear-gradient(180deg, #fffef9 0%, #fffdf4 100%);
+      box-shadow: 0 2px 6px rgba(184, 146, 47, 0.12);
+    }
+    .note-card-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      gap: 8px;
+    }
+    .note-pinned-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      background: #fdf6e2;
+      color: #8c6810;
+      border: 1px solid #f2dda4;
+      border-radius: 10px;
+      padding: 1px 7px;
+      font-size: 10.5px;
+      font-weight: 600;
+      margin-left: 6px;
+      user-select: none;
+    }
+    .note-pin-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 14px;
+      line-height: 1;
+      color: var(--ink-soft);
+      transition: all .15s ease;
+      user-select: none;
+    }
+    .note-pin-btn:hover {
+      background: #f4efe2;
+      border-color: var(--card-edge);
+      color: var(--ink);
+      transform: scale(1.15);
+    }
+    .note-pin-btn.active {
+      color: var(--gold);
+      background: #fdf8eb;
+      border-color: #f2dda4;
+    }
+    #pinEditorBtn {
+      font-size: 11px;
+      padding: 3px 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      border-radius: 3px;
+      cursor: pointer;
+      border: 1px solid var(--card-edge);
+      background: #fff;
+      color: var(--ink-soft);
+      transition: all .15s;
+      user-select: none;
+    }
+    #pinEditorBtn:hover {
+      border-color: var(--gold);
+      color: var(--gold);
+      background: #fffdf5;
+    }
+    #pinEditorBtn.pinned {
+      background: #fdf8eb;
+      border-color: #f2dda4;
+      color: #8c6810;
+      font-weight: 600;
+    }
+
+    .note-card .meta {
+      font-size: 11px;
+      color: var(--ink-soft);
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .note-card .meta .cat-badge {
+      font-size: 10.5px;
+      padding: 2px 9px;
+      border-radius: 12px;
+      color: #fff;
+      white-space: nowrap;
+      font-weight: 500;
+    }
+    .note-card .title {
+      font-family: 'Source Serif 4', Georgia, serif;
+      font-weight: 600;
+      font-size: 17px;
+      margin-bottom: 6px;
+      line-height: 1.4;
+      color: var(--ink);
+    }
+    .note-card .preview {
+      font-size: 13.5px;
+      line-height: 1.55;
+      max-height: 3.2em;
+      overflow: hidden;
+      color: var(--ink-soft);
+      word-break: break-word;
+    }
+    .note-card .preview mark, .note-card .title mark {
+      background: transparent;
+      color: inherit;
+      font-weight: 700;
+      border-bottom: 2px solid var(--gold);
+    }
+    .note-card .attach-row {
+      margin-top: 10px;
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .note-card .attach-chip {
+      font-size: 11px;
+      background: var(--paper);
+      border: 1px solid var(--card-edge);
+      padding: 3px 8px;
+      color: var(--ink-soft);
+      cursor: pointer;
+      border-radius: 2px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all .15s;
+    }
+    .note-card .attach-chip:hover {
+      color: var(--slate);
+      border-color: var(--slate);
+      background: #fff;
+    }
+    .note-card .attach-chip.tx-amount.income {
+      color: var(--moss);
+      font-weight: 700;
+      background: transparent;
+      border-color: transparent;
+      cursor: default;
+    }
+    .note-card .attach-chip.tx-amount.expense {
+      color: var(--danger);
+      font-weight: 700;
+      background: transparent;
+      border-color: transparent;
+      cursor: default;
+    }
+    .note-card .attach-chip.tx-amount.debt {
+      color: var(--gold);
+      font-weight: 700;
+      background: transparent;
+      border-color: transparent;
+      cursor: default;
+    }
+    .note-card .attach-chip.tx-amount.debt.paid {
+      color: var(--ink-soft);
+      text-decoration: line-through;
+      font-weight: 500;
+      background: transparent;
+      border-color: transparent;
+    }
+
+    .note-card .del-btn {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: none;
+      border: none;
+      color: var(--ink-soft);
+      font-size: 14px;
+      cursor: pointer;
+      padding: 4px 6px;
+      opacity: 0.25;
+      transition: opacity .15s, color .15s;
+    }
+    .note-card:hover .del-btn { opacity: 1; }
+    .note-card .del-btn:hover { color: var(--danger); }
+    .notes-list.select-mode .note-card .del-btn { display: none; }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--ink-soft);
+      font-family: 'Source Serif 4', Georgia, serif;
+      font-size: 16px;
+      line-height: 1.6;
+      background: var(--card);
+      border: 1px dashed var(--card-edge);
+      border-radius: 2px;
+    }
+
+    /* FABs */
+    .fab {
+      position: fixed;
+      bottom: 24px;
+      right: 22px;
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      background: var(--moss);
+      color: #fdfaf2;
+      border: none;
+      font-size: 28px;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(43,42,36,.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform .12s, background .12s;
+      line-height: 0;
+      z-index: 20;
+    }
+    .fab:hover {
+      background: var(--moss-dark);
+      transform: scale(1.06);
+    }
+    .fab-chat {
+      position: fixed;
+      bottom: 24px;
+      left: 22px;
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      background: var(--slate);
+      color: #fdfaf2;
+      border: none;
+      font-size: 22px;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(43,42,36,.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform .15s ease, background .15s ease, box-shadow .15s ease;
+      z-index: 20;
+      user-select: none;
+    }
+    .fab-chat:hover {
+      background: #314856;
+      transform: scale(1.06) translateY(-2px);
+      box-shadow: 0 6px 20px rgba(43,42,36,.45);
+    }
+    .fab-chat:active {
+      transform: scale(0.95);
+      box-shadow: 0 2px 8px rgba(43,42,36,.3);
+    }
+    .fab-chat:focus-visible {
+      outline: 3px solid var(--slate);
+      outline-offset: 3px;
+    }
+
+    /* Modals & Overlays */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(20,19,15,.55);
+      backdrop-filter: blur(2px);
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      z-index: 50;
+      padding: 0;
+    }
+    .overlay.open { display: flex; }
+    @media (min-width: 640px) {
+      .overlay {
+        align-items: center;
+        padding: 20px;
       }
+    }
 
-      function escapeHtml(text) {
-        return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    .modal-base {
+      background: var(--card);
+      width: 100%;
+      max-height: 92vh;
+      overflow-y: auto;
+      border-radius: 2px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+      display: flex;
+      flex-direction: column;
+    }
+    @media (max-width: 639px) {
+      .modal-base {
+        max-height: 95vh;
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
       }
-    });
-  </script>
-  <script src="./pwa-updates.js"></script>
-</body>
-</html>
+    }
+
+    .modal-header-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--card-edge);
+      background: #fff;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .modal-header-bar h2 {
+      font-family: 'Source Serif 4', Georgia, serif;
+      font-size: 18px;
+      margin: 0;
+      color: var(--ink);
+    }
+    .modal-close-btn {
+      background: none;
+      border: none;
+      font-size: 18px;
+      color: var(--ink-soft);
+      cursor: pointer;
+      padding: 4px 8px;
+      line-height: 1;
+      border-radius: 2px;
+    }
+    .modal-close-btn:hover {
+      color: var(--danger);
+      background: var(--paper);
+    }
+
+    /* Note Editor Modal */
+    .modal {
+      width: 100%;
+      max-width: 680px;
+      padding: 18px 20px;
+      border-top: 4px solid var(--moss);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-height: 92vh;
+      overflow-y: auto;
+      background: var(--card);
+    }
+    @media (min-width: 640px) {
+      .modal {
+        border-top: none;
+        border-left: 4px solid var(--moss);
+      }
+    }
+
+    .modal input#noteTitle {
+      width: 100%;
+      font-family: 'Source Serif 4', Georgia, serif;
+      font-weight: 600;
+      font-size: 19px;
+      padding: 10px 14px;
+      border: 1px solid var(--card-edge);
+      background: #fff;
+      color: var(--ink);
+      outline: none;
+      border-radius: 2px;
+    }
+    .modal input#noteTitle:focus { border-color: var(--moss); }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      background: #fff;
+      border: 1px solid var(--card-edge);
+      border-bottom: none;
+      padding: 6px;
+      border-top-left-radius: 2px;
+      border-top-right-radius: 2px;
+    }
+    .toolbar button {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      background: none;
+      border: 1px solid transparent;
+      padding: 5px 9px;
+      cursor: pointer;
+      color: var(--ink);
+      border-radius: 2px;
+    }
+    .toolbar button:hover {
+      border-color: var(--card-edge);
+      background: var(--paper);
+    }
+    .toolbar select {
+      font-family: 'IBM Plex Mono', monospace
