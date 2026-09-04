@@ -1,15 +1,12 @@
-const CACHE_NAME = 'catatan-pintar-v3'; 
+const CACHE_NAME = 'catatan-pintar-v5'; 
 
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './manifest.json',
   './pwa-updates.js',
-  './icons/icon-192.png',
-  './icons/icon-512.png',
-  // Sesuaikan dengan nama aset hasil kompilasi Anda saat ini
-  './assets/index-BZdFqhWG.js', 
-  './assets/web-_2ApSN0m.js'
+  './storage.js'
+  // Jangan masukkan database lokal ke dalam cache ini
 ];
 
 self.addEventListener('install', (event) => {
